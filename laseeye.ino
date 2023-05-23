@@ -1,7 +1,13 @@
 #include <IRremote.hpp>
 #include <Servo.h>
+#include <Stepper.h>
+
+#define STEPS 2048
+#define STEP1 16  //normal step count
+#define STEP2 128 //skip step count
 
 Servo servo1;
+Stepper stepper(STEPS, 4, 5, 6, 7);
 int RECV_PIN = 2;
 int SERVO_PIN = 3;
 int iRemoteCommand[21] = 
@@ -13,7 +19,7 @@ int iRemoteCommand[21] =
    8 ,28,90,
    66,82,74}; //DEC codes for the specific remote sorted from left to right, up to down
 const int iUp = 70, iLeft = 68, iRight = 67, iDown = 21,
-          iSkipUp = 69,iSkipDown = 71; //keybind
+          iSkipUp = 69, iSkipLeft = 7, iSkipRight = 9, iSkipDown = 71; //keybind
 
 void setup(){
   Serial.begin(9600);
@@ -22,9 +28,14 @@ void setup(){
   Serial.println(F("IrReceiver.begin"));
   servo1.attach(SERVO_PIN);// Start the servo
   servo1.write(0); //set the servo to zero position
+  stepper.setSpeed(5);
 }
 
 void loop(){
+  ttemp();
+}
+
+void ttemp(){
   //check if there is an incoming IR signal
   if (IrReceiver.decode()){
 
@@ -36,6 +47,7 @@ void loop(){
       
       //everything else here(tentative)
       Servo_Handler(iCommandCodeOut);
+      Stepper_Motor_Handler(iCommandCodeOut);
     }
     IrReceiver.resume(); // Enable receiving of the next value
   }
@@ -50,6 +62,25 @@ int IR_Remote_F(){
        //IrReceiver.printIRResultShort(&Serial); //print the data to serial
        return i;
       }else {return 0;}
+}
+
+//stepper motor Handler
+void Stepper_Motor_Handler(int iCommandCodeOut){
+  
+  switch (iCommandCodeOut){
+    case iLeft:
+      stepper.step(STEP1);
+      break;
+    case iRight:
+      stepper.step(-STEP1);
+      break;
+    case iSkipLeft:
+      stepper.step(STEP2);
+      break;
+    case iSkipRight:
+      stepper.step(-STEP2);
+      break;
+  }
 }
 
 //servo handler function
