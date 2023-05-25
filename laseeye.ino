@@ -3,12 +3,13 @@
 #include <Stepper.h>
 
 #define STEPS 2048
-#define STEP1 48  //normal step count
+#define STEP1 8  //normal step count
 #define STEP2 STEPS / 12 //skip step count
 #define STEPSPEED 14
 
 Servo servo1;
 Stepper stepper(STEPS, 4, 5, 6, 7);
+bool bStepRot = false;
 int RECV_PIN = 2;
 int SERVO_PIN = 3;
 //const int iRCom[21] = 
@@ -25,36 +26,38 @@ const int iUp = 70, iLeft = 68, iRight = 67, iDown = 21,
           i20Deg = 12, iDefaultPos = 64; //keybinds
 
 void setup(){
-  Serial.begin(9600);
-  Serial.println(F("Serial 9600"));
+  Serial.begin(19200);
   IrReceiver.begin(RECV_PIN); // Start the receiver
-  Serial.println(F("IrReceiver.begin"));
   servo1.attach(SERVO_PIN);// Start the servo
   servo1.write(0); //set the servo to zero position
   stepper.setSpeed(STEPSPEED);
 }
 
 void loop(){
-  
   ttemp();
   
 }
 
 void ttemp(){
   //check if there is an incoming IR signal
+  int iCommandCodeOut;
   if (IrReceiver.decode()){
 
     //save the command code to an int
-    int iCommandCodeOut(IR_Remote_F());
+    iCommandCodeOut = IR_Remote_F();
 
     //check if the value is not unknown
     if(iCommandCodeOut != 0){
       //everything else here(tentative)
-      Servo_Handler(iCommandCodeOut);
+      //Servo_Handler(iCommandCodeOut);
       Stepper_Motor_Handler(iCommandCodeOut);
-      Presets_Function(iCommandCodeOut);
-    }
+
+      //Presets_Function(iCommandCodeOut);
+    }else if (iCommandCodeOut == 0) bStepRot = false;
     IrReceiver.resume(); // Enable receiving of the next value
+  }
+  if(bStepRot){
+    stepper.step(1);
   }
 }
 
@@ -72,16 +75,19 @@ void Stepper_Motor_Handler(int iCommandCodeOut){
   
   switch (iCommandCodeOut){
     case iLeft:
-      stepper.step(STEP1);
+      bStepRot = true;
       break;
     case iRight:
-      stepper.step(-STEP1);
+      bStepRot = false;
       break;
     case iSkipLeft:
       stepper.step(STEP2);
       break;
     case iSkipRight:
       stepper.step(-STEP2);
+      break;
+    default:
+      bStepRot = false;
       break;
   }
 }
