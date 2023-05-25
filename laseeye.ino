@@ -3,8 +3,9 @@
 #include <Stepper.h>
 
 #define STEPS 2048
-#define STEP1 8  //normal step count
-#define STEP2 64 //skip step count
+#define STEP1 48  //normal step count
+#define STEP2 STEPS / 12 //skip step count
+#define STEPSPEED 14
 
 Servo servo1;
 Stepper stepper(STEPS, 4, 5, 6, 7);
@@ -20,8 +21,8 @@ int SERVO_PIN = 3;
 //   66,82,74}; //DEC codes for the specific remote sorted from left to right, up to down
 const int iUp = 70, iLeft = 68, iRight = 67, iDown = 21,
           iSkipUp = 69, iSkipLeft = 7, iSkipRight = 9, iSkipDown = 71,
-          iBow = 22, i90CCW = 25, i90CW = 13, i180CCW = 24, i180CW = 94,//keybind
-          iDefaultPos = 64;
+          iBow = 22, i90CCW = 25, i90CW = 13, i180CCW = 24, i180CW = 94,
+          i20Deg = 12, iDefaultPos = 64; //keybinds
 
 void setup(){
   Serial.begin(9600);
@@ -30,7 +31,7 @@ void setup(){
   Serial.println(F("IrReceiver.begin"));
   servo1.attach(SERVO_PIN);// Start the servo
   servo1.write(0); //set the servo to zero position
-  stepper.setSpeed(5);
+  stepper.setSpeed(STEPSPEED);
 }
 
 void loop(){
@@ -49,9 +50,9 @@ void ttemp(){
     //check if the value is not unknown
     if(iCommandCodeOut != 0){
       //everything else here(tentative)
-      Presets_Function(iCommandCodeOut);
       Servo_Handler(iCommandCodeOut);
       Stepper_Motor_Handler(iCommandCodeOut);
+      Presets_Function(iCommandCodeOut);
     }
     IrReceiver.resume(); // Enable receiving of the next value
   }
@@ -71,9 +72,7 @@ void Stepper_Motor_Handler(int iCommandCodeOut){
   
   switch (iCommandCodeOut){
     case iLeft:
-      /////////////////
       stepper.step(STEP1);
-      /////////////////
       break;
     case iRight:
       stepper.step(-STEP1);
@@ -110,15 +109,9 @@ void Servo_Handler(int iCommandCodeOut){
     servo1.write(iCurPos);// sets the servo position according to the new value
     /////////////////
   }
-  Serial.print(iCurPos);
-  Serial.print(" ");
-  Serial.println(servo1.read());
-  delay(10);// delays the next requests
 }
 
 void Presets_Function(int iCommandCodeOut){
-  Serial.print(":::");
-  Serial.println(iCommandCodeOut);
   switch (iCommandCodeOut){
     case iBow: //bow down
       servo1.write(120);
@@ -128,7 +121,7 @@ void Presets_Function(int iCommandCodeOut){
     case iDefaultPos: //flip y, 0 or 180
       if (servo1.read() == 0) servo1.write(180);
       else servo1.write(0);
-      delay(500);
+      //delay(450);
       break;
     case i90CCW: //x axis rotate
       stepper.step(-(STEPS / 4));
@@ -141,6 +134,9 @@ void Presets_Function(int iCommandCodeOut){
       break;
     case i180CW: //x axis rotate
       stepper.step(STEPS / 2);
+      break;
+    case i20Deg:
+      servo1.write(110);
       break;
   }
 }
