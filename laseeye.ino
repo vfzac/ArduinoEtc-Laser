@@ -2,13 +2,14 @@
 #include <Servo.h>
 #include <Stepper.h>
 
-#define STEPS 2048
-#define STEP1 48  //normal step count
-#define STEP2 STEPS / 12 //skip step count
-#define STEPSPEED 14
+#define STEPS 512
+#define STEP1 8  //normal step count
+#define STEP2 STEPS / 8 //skip step count
+#define STEPSPEED 30
 
 Servo servo1;
 Stepper stepper(STEPS, 4, 5, 6, 7);
+bool bStepRot = false;
 int RECV_PIN = 2;
 int SERVO_PIN = 3;
 //const int iRCom[21] = 
@@ -25,27 +26,25 @@ const int iUp = 70, iLeft = 68, iRight = 67, iDown = 21,
           i20Deg = 12, iDefaultPos = 64; //keybinds
 
 void setup(){
-  Serial.begin(9600);
-  Serial.println(F("Serial 9600"));
+  Serial.begin(19200);
   IrReceiver.begin(RECV_PIN); // Start the receiver
-  Serial.println(F("IrReceiver.begin"));
   servo1.attach(SERVO_PIN);// Start the servo
   servo1.write(0); //set the servo to zero position
   stepper.setSpeed(STEPSPEED);
 }
 
 void loop(){
-  
   ttemp();
   
 }
 
 void ttemp(){
   //check if there is an incoming IR signal
+  int iCommandCodeOut;
   if (IrReceiver.decode()){
 
     //save the command code to an int
-    int iCommandCodeOut(IR_Remote_F());
+    iCommandCodeOut = IR_Remote_F();
 
     //check if the value is not unknown
     if(iCommandCodeOut != 0){
@@ -53,7 +52,7 @@ void ttemp(){
       Servo_Handler(iCommandCodeOut);
       Stepper_Motor_Handler(iCommandCodeOut);
       Presets_Function(iCommandCodeOut);
-    }
+    }else if (iCommandCodeOut == 0) bStepRot = false;
     IrReceiver.resume(); // Enable receiving of the next value
   }
 }
@@ -83,6 +82,9 @@ void Stepper_Motor_Handler(int iCommandCodeOut){
     case iSkipRight:
       stepper.step(-STEP2);
       break;
+    default:
+      bStepRot = false;
+      break;
   }
 }
 
@@ -107,6 +109,7 @@ void Servo_Handler(int iCommandCodeOut){
   if(iCurPos != servo1.read() && (iCurPos <= 180 || iCurPos >=0)) {
     /////////////////
     servo1.write(iCurPos);// sets the servo position according to the new value
+    Serial.println(F("servo"));
     /////////////////
   }
 }
@@ -124,16 +127,16 @@ void Presets_Function(int iCommandCodeOut){
       //delay(450);
       break;
     case i90CCW: //x axis rotate
-      stepper.step(-(STEPS / 4));
+      stepper.step(-(STEPS));
       break;
     case i90CW: //x axis rotate
-      stepper.step(STEPS / 4);
+      stepper.step(STEPS*2);
       break;
     case i180CCW: //x axis rotate
-      stepper.step(-(STEPS / 2));
+      stepper.step(-(STEPS*4));
       break;
     case i180CW: //x axis rotate
-      stepper.step(STEPS / 2);
+      stepper.step(STEPS*4);
       break;
     case i20Deg:
       servo1.write(110);
